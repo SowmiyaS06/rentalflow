@@ -1,7 +1,7 @@
 # Copyright (c) 2026, Sowmiya and Contributors
 # See license.txt
 
-import frappe
+# import frappe
 from frappe.tests import IntegrationTestCase
 
 
@@ -13,9 +13,9 @@ IGNORE_TEST_RECORD_DEPENDENCIES = []  # eg. ["User"]
 
 
 
-class IntegrationTestEquipmentUnit(IntegrationTestCase):
+class IntegrationTestAudit(IntegrationTestCase):
 	"""
-	Integration tests for EquipmentUnit.
+	Integration tests for Audit.
 	Use this class for testing interactions between multiple components.
 	"""
 

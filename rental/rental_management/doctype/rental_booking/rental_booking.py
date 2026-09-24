@@ -41,7 +41,7 @@ class RentalBooking(Document):
 				if(checkin>checkout):
 					diff=checkin-checkout
 					item.damage_fee=damage_fee_per_grade_drop*diff
-			damage_total+=item.damage_fee
+					damage_total+=item.damage_fee
 		self.damage_total=damage_total
 		self.final_amount=self.rental_total+self.damage_total
 		# frappe.msgprint(f"{self.final_amount}")
@@ -49,12 +49,12 @@ class RentalBooking(Document):
 
 	def overlap(self):
 		for item in self.items:
-			if item.equivalent_unit:
+			if item.equipment_unit:
 				conflict=frappe.db.sql("""select rb.name from `tabRental Booking` rb inner join `tabBooking Item` bi on bi.parent = rb.name where rb.docstatus = 1
 					and rb.name != %s and rb.status NOT IN ('Cancelled', 'Returned') and bi.equipment_unit = %s
 					and rb.start_date <= %s and rb.end_date >= %s""",(self.name,item.equipment_unit,self.end_date,self.start_date),as_dict=True)
 				if conflict:
-					frappe.throw(f"Equipment Unit {item.equipmet_unit} is booked {conflict[0]}")
+					frappe.throw(f"Equipment Unit {item.equipment_unit} is booked {conflict[0]}")
 
 	def on_save(self):
 		for item in self.items:
@@ -63,6 +63,64 @@ class RentalBooking(Document):
 				# frappe.db.set_value("Booking Item",item.name,"daily_rate",daily_rate)
 				item.daily_rate=daily_rate
 
+	def before_submit(self):
+		if self.status!="Confirmed":
+			frappe.throw(f"Status is not set to confirmed.You cannot be able to submit the document.")
+		if self.deposit_collected<=0:
+			frappe.throw(f"Deposit Collected should be greater than 0.")
+		self.overlap()
+
+	def on_submit(self):
+		for item in self.items:
+			frappe.db.set_value("Equipment Unit",item.equipment_unit,"current_status","Reserved",update_modified=False)
+			invoice=frappe.get_doc({
+			'doctype':'Rental Invoice',
+			'rental_booking':self.name,
+			'rental_amount':self.rental_total,
+			'damage_amount':self.damage_total,
+			'total_amount':self.final_amount
+			})
+			invoice.insert(ignore_permissions=True)
+		frappe.enqueue("rental.rental_management.doctype.rental_booking.rental_booking.send_booking_confirmation",booking_name=self.name,queue="short")
+
+	def send_booking_confirmation(booking_name):
+		booking = frappe.get_doc("Rental Booking", booking_name)
+		frappe.sendmail(
+		recipients=[booking.customer_email],
+        subject=f"Booking Confirmed - {booking.name}",
+        message=f"""
+			Your rental booking {booking.name} has been confirmed.
+            Start Date: {booking.start_date}
+            End Date: {booking.end_date}
+            Rental Total: {booking.rental_total}""",
+			header=('Booking Confirmed'))
+		
+	def on_cancel(self):
+		self.db_set("status","Cancelled")
+		for item in self.items:
+			frappe.db.set_value(
+				"Equipment Unit",
+				item.equipment_unit,
+				"current_status",
+				"Available"
+			)
+		invoice=frappe.db.get_value("Rental Invoice",{
+			"rental_booking":self.name,
+			"payment_status":"Unpaid"
+		},"name")
+		if invoice:
+			invoice=frappe.get_doc("Rental Invoice",invoice)
+			if invoice.docstatus==1:
+				invoice.cancel()
+
+	def on_trash(self):
+		if self.status not in ("Cancelled","Draft"):
+			frappe.throw("Status which are not in Cancelled or Draft can't be deleted")
+
+	# RecursionError: maximum recursion depth exceeded
+	# def on_update(self):
+	# 	self.final_amount=self.rental_total+self.damage_total
+	# 	self.save()
 
 
 

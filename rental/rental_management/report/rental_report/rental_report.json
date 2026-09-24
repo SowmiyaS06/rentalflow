@@ -1,0 +1,39 @@
+{
+ "add_total_row": 0,
+ "add_translate_data": 0,
+ "columns": [],
+ "creation": "2026-09-24 16:43:39.031576",
+ "disable_prepared_report_automation": 0,
+ "disabled": 0,
+ "docstatus": 0,
+ "doctype": "Report",
+ "filters": [],
+ "idx": 0,
+ "is_standard": "Yes",
+ "letter_head": null,
+ "modified": "2026-09-24 17:01:33.582385",
+ "modified_by": "Administrator",
+ "module": "Rental Management",
+ "name": "Rental Report",
+ "owner": "Administrator",
+ "prepared_report": 0,
+ "query": "select name,customer_name,end_date,status,handled_by from `tabRental Booking` where status=\"Checked Out\" \nand end_date < curdate() order by end_date",
+ "ref_doctype": "Rental Booking",
+ "report_name": "Rental Report",
+ "report_type": "Query Report",
+ "roles": [
+  {
+   "role": "System Manager"
+  },
+  {
+   "role": "Front Desk"
+  },
+  {
+   "role": "Inspector"
+  },
+  {
+   "role": "Manager"
+  }
+ ],
+ "timeout": 0
+}

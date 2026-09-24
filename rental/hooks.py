@@ -256,3 +256,12 @@ app_license = "mit"
 # List of apps whose translatable strings should be excluded from this app's translations.
 # ignore_translatable_strings_from = []
 
+after_install = "rental.api.after_install"
+
+doc_events = {
+    "*": {
+        "on_update": "rental.api.log_change",
+        "on_submit": "rental.api.log_change",
+        "on_cancel": "rental.api.log_change",
+    }
+}

@@ -6,7 +6,7 @@ from frappe.model.document import Document
 
 class EquipmentUnit(Document):
     def validate(self):
-        self.autoname
+        self.autoname()
     def autoname(self):
         ctgry_name = frappe.db.get_value("Equipment Category",self.category,"name")
         pre = ctgry_name[:3].upper()
