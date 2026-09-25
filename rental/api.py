@@ -65,3 +65,25 @@ def get_overdue_returns():
     .where(rental_booking.end_date<frappe.utils.today())
     .orderby(rental_booking.end_date))
     return q
+
+@frappe.whitelist()
+def trigger_handler(booking,new):
+    handle=frappe.db.set_value("Rental Booking",booking,"handled_by",new)
+    frappe.db.commit()
+    return True
+
+
+@frappe.whitelist()
+def get_booking_status():
+    booking_name = frappe.form_dict.get("booking_name")
+    booking = frappe.db.get_value("Rental Booking",booking_name,["name", "customer_name", "status", "start_date", "end_date"],as_dict=True)
+    if not booking:
+        frappe.local.response.http_status_code = 404
+        return {"error": "Not found"}
+    return {
+        "name": booking.name,
+        "customer_name": booking.customer_name,
+        "status": booking.status,
+        "start_date": booking.start_date,
+        "end_date": booking.end_date
+    }

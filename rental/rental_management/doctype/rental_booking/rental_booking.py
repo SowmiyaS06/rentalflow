@@ -2,7 +2,14 @@
 # For license information, please see license.txt
 
 import frappe
-from frappe.model.document import Document 
+from frappe.model.document import Document
+
+# def before_print(doc, method=None):
+#     doc.print_summary = (
+#         f"{doc.customer_name} - "
+#         f"{doc.start_date} to {doc.end_date}"
+#     )
+
 
 class RentalBooking(Document):
 	def validate(self):
@@ -121,6 +128,54 @@ class RentalBooking(Document):
 	# def on_update(self):
 	# 	self.final_amount=self.rental_total+self.damage_total
 	# 	self.save()
+
+	# def before_print(self,doc):
+	# 	self.print_summary = f"{doc.customer_name} - {doc.start_date} to {doc.end_date}"
+
+@frappe.whitelist()
+def get_shop_name():
+	return frappe.db.get_single_value("RentFlow Settings","shop_name")
+
+def before_print(doc, method=None,print_settings=None):
+    doc.print_summary = (f"{doc.customer_name} - "f"{doc.start_date} to {doc.end_date}")
+
+
+
+
+def rental_booking_query(user):
+	if "Manager"==frappe.session.user:
+		return ""
+	if "Inspector"==frappe.session.user:
+		# return """`tabRental Booking`.`handled_by` in(select `name` from `tabYard Staff` where user='{user}').format(user=frappe.db.escape(user)"""
+		safe_user = frappe.db.escape(user)
+		return f"`tabRental Booking`.handled_by in (select name from `tabYard Staff` where user = {safe_user})"
+	return ""
+
+
+@frappe.whitelist()
+def get_booking_unsafe():
+	doc=frappe.db.get_all("Rental Booking")
+
+@frappe.whitelist()
+def get_booking_safe():
+	bookings = frappe.get_list("Rental Booking",
+	    fields=["name","customer_name","customer_phone","customer_email","start_date","end_date","status","handled_by","rental_total"])
+	if "Manager"==frappe.session.user:
+			return bookings
+	safe_bookings=[]
+	for booking in bookings:
+		safe_booking = {
+            "name": booking["name"],
+            "customer_name": booking["customer_name"],
+            "start_date": booking["start_date"],
+            "end_date": booking["end_date"],
+            "status": booking["status"],
+            "handled_by": booking["handled_by"],
+            "rental_total": booking["rental_total"]
+        }
+		safe_bookings.append(safe_booking)
+	return safe_bookings
+
 
 
 

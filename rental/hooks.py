@@ -263,5 +263,17 @@ doc_events = {
         "on_update": "rental.api.log_change",
         "on_submit": "rental.api.log_change",
         "on_cancel": "rental.api.log_change",
+    },
+    "Rental Booking":{
+        "before_print":"rental.rental_management.doctype.rental_booking.rental_booking.before_print"
     }
 }
+
+jinja={
+    "methods":"rental.rental_management.doctype.rental_booking.rental_booking.get_shop_name"
+}
+
+permission_query_conditions = {
+    "Rental Booking": "rental.rental_management.doctype.rental_booking.rental_booking.rental_booking_query"
+}
+

@@ -8,7 +8,7 @@
     def on_update():
         self.save()
             ->def on_update():
-                self.save()
+                 self.save()
                     ->this goes on
     Hence, to avoid this recursion pitfall calculating the final amount inside validate function is enough no need to call self.save() method.
 
@@ -44,73 +44,59 @@
     })
     But validate function in client event runs synchronously as it is a lifecycle event triggered automatically.So frappe.call inside the validate client event 
     does not work. 
+    Onload/refresh event runs whenever the doctype which will be helpful for checking stuffs whenever a document loads
+
+### D2:Don't leak data" task: two versions of a whitelisted method returning booking data — unsafe (all fields to any caller) and safe (frappe.get_list, strips customer_phone/customer_email for non-Manager callers).
+    @frappe.whitelist()
+    def get_booking_unsafe():
+	    doc=frappe.db.get_all("Rental Booking")
+
+    @frappe.whitelist()
+    def get_booking_safe():
+	    bookings = frappe.get_list("Rental Booking",
+	        fields=["name","customer_name","customer_phone","customer_email","start_date","end_date","status","handled_by","rental_total"])
+	    if "Manager"==frappe.session.user:
+			return bookings
+	    safe_bookings=[]
+	    for booking in bookings:
+		    safe_booking = {
+                "name": booking["name"],
+                "customer_name": booking["customer_name"],
+                "start_date": booking["start_date"],
+                "end_date": booking["end_date"],
+                "status": booking["status"],
+                "handled_by": booking["handled_by"],
+                "rental_total": booking["rental_total"]
+                }
+		    safe_bookings.append(safe_booking)
+	    return safe_bookings
+
+### B3 — Dangerous Patterns
+### document lifecycle bugs
+### The snippet below has two bugs related to document lifecycle. Identify both and write the corrected version in README_internals.md:
+### def validate(self):
+###     self.rental_total = sum(r.line_amount for r in self.items)
+###     self.save()
+###     unit = frappe.get_doc("Equipment Unit", self.items[0].equipment_unit)
+###     unit.current_status = "Rented"
+###     unit.save()
+    Calling self.save() inside validate function again triggers the lifecycle method validate() which causes an infinite recursion
+
+### J:In README_internals.md: explain frappe.get_all() inside the Jinja template directly vs. pre-computing in before_print() and referencing doc.precomputed_field.
+    If you use this print format, Jinja will reach the database every single time for every single document and this can causes severe lag over serve.Use before_print() for any logic involving loops, calculations,etc., this lessens the server waiting time as well.Hence direct calculataion using jinja can be used for simple logics only.
+
+### K2: Spot the N+1 Identify and rewrite:
+# N+1 PROBLEM - fix this
+# bookings = frappe.get_all("Rental Booking", fields=["name","handled_by"])
+# for b in bookings:
+#    staff = frappe.get_doc("Yard Staff", b.handled_by)
+#    print(staff.staff_name, staff.phone)
+    The N+1 query problem in the code happens because frappe.get_doc runs a separate database query inside a loop for every single booking.
+    Therefore,If we have 100 bookings.. script will hit the database 101 times 
+        => 1 to get bookings + 100 to get each staff member's details
+
+### N1: List every use of ignore_permissions=True; justify each in one sentence. Add a JS field hide on customer_phone for non-managers, then show a direct API call can still retrieve it. Explain why hiding a field in JavaScript is not a security measure
+    Ignore permission provides access to a particular doctype to the user to even if they aren't given access to that particular doctype.  Hiding the data from UI doesn't mean they aren't available in database so to avoid this we have to set perm level for that field and same permission level to the user only then we can prevent the visibility to that field even through API call
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-### Rental Management
-
-Rental Management
-
-### Installation
-
-You can install this app using the [bench](https://github.com/frappe/bench) CLI:
-
-```bash
-cd $PATH_TO_YOUR_BENCH
-bench get-app $URL_OF_THIS_REPO --branch version-16
-bench install-app rental
-```
-
-### Contributing
-
-This app uses `pre-commit` for code formatting and linting. Please [install pre-commit](https://pre-commit.com/#installation) and enable it for this repository:
-
-```bash
-cd apps/rental
-pre-commit install
-```
-
-Pre-commit is configured to use the following tools for checking and formatting your code:
-
-- ruff
-- eslint
-- prettier
-- pyupgrade
-
-### License
-
-mit
